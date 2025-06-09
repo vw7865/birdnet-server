@@ -16,7 +16,7 @@ def download_file(url: str, filename: str):
     # Check file size
     file_size = os.path.getsize(filename)
     print(f"Downloaded file size: {file_size} bytes")
-    if file_size < 100_000_000:  # Should be >100MB
+    if file_size < 50_000_000:  # Should be >50MB (actual model size is ~51.7MB)
         raise Exception("Downloaded model file is too small! Download failed or incomplete.")
 
 def main():
