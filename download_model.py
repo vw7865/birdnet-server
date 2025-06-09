@@ -20,7 +20,7 @@ def download_file(url: str, filename: str):
         raise Exception("Downloaded model file is too small! Download failed or incomplete.")
 
 def main():
-    model_url = "https://github.com/kahst/BirdNET-Analyzer/raw/main/model/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite"
+    model_url = "https://github.com/woheller69/whoBIRD-TFlite/raw/master/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite"
     model_path = "model/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite"
     
     print("Downloading BirdNET model...")
