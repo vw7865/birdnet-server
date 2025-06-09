@@ -8,7 +8,6 @@ import librosa
 import numpy as np
 import tensorflow as tf
 import soundfile as sf
-import traceback
 
 app = FastAPI(title="BirdNET-Analyzer API")
 
@@ -98,16 +97,31 @@ import traceback
 
 @app.post("/analyze", response_model=List[BirdNetResult])
 async def analyze_audio(audio: UploadFile):
+    print("Received /analyze request")  # For debugging
     try:
-        # ... your existing code ...
+        # Save uploaded file to a temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".m4a") as temp_file:
+            content = await audio.read()
+            temp_file.write(content)
+            temp_file.flush()
+            temp_path = temp_file.name
+
+        # Load and process audio
+        audio_data, sample_rate = librosa.load(temp_path, sr=None)
+
+        # Load model if not loaded
+        load_model()
+
+        # Process audio
+        results = process_audio(audio_data, sample_rate)
+
+        # Clean up
+        os.unlink(temp_path)
+
         return results
+
     except Exception as e:
-        traceback.print_exc()  # <-- Add this line
-        raise HTTPException(status_code=500, detail=str(e))
-            
-            return results
-            
-    except Exception as e:
+        traceback.print_exc()  # This will print the full error to the logs
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
