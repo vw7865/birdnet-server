@@ -8,6 +8,7 @@ import librosa
 import numpy as np
 import tensorflow as tf
 import soundfile as sf
+import traceback
 
 app = FastAPI(title="BirdNET-Analyzer API")
 
@@ -93,27 +94,16 @@ def process_audio(audio_data: np.ndarray, sample_rate: int) -> List[BirdNetResul
     
     return results
 
+import traceback
+
 @app.post("/analyze", response_model=List[BirdNetResult])
 async def analyze_audio(audio: UploadFile):
     try:
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".m4a") as temp_file:
-            # Save uploaded file
-            content = await audio.read()
-            temp_file.write(content)
-            temp_file.flush()
-            
-            # Load and process audio
-            audio_data, sample_rate = librosa.load(temp_file.name, sr=None)
-            
-            # Load model if not loaded
-            load_model()
-            
-            # Process audio
-            results = process_audio(audio_data, sample_rate)
-            
-            # Clean up
-            os.unlink(temp_file.name)
+        # ... your existing code ...
+        return results
+    except Exception as e:
+        traceback.print_exc()  # <-- Add this line
+        raise HTTPException(status_code=500, detail=str(e))
             
             return results
             
