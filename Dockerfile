@@ -18,9 +18,10 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Download the BirdNET model (optional: you can also do this manually)
-# RUN python download_model.py
+RUN python download_model.py
 
 # Expose port
+
 EXPOSE 8080
 
 # Start the server
