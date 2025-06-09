@@ -1,26 +1,25 @@
 import os
 import requests
-from tqdm import tqdm
 
 def download_file(url: str, filename: str):
     response = requests.get(url, stream=True)
+    if response.status_code != 200:
+        raise Exception(f"Failed to download file: {response.status_code} {response.reason}")
     total_size = int(response.headers.get('content-length', 0))
     
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     
-    with open(filename, 'wb') as file, tqdm(
-        desc=filename,
-        total=total_size,
-        unit='iB',
-        unit_scale=True,
-        unit_divisor=1024,
-    ) as pbar:
+    with open(filename, 'wb') as file:
         for data in response.iter_content(chunk_size=1024):
-            size = file.write(data)
-            pbar.update(size)
+            file.write(data)
+    
+    # Check file size
+    file_size = os.path.getsize(filename)
+    print(f"Downloaded file size: {file_size} bytes")
+    if file_size < 100_000_000:  # Should be >100MB
+        raise Exception("Downloaded model file is too small! Download failed or incomplete.")
 
 def main():
-    # BirdNET model URL (you'll need to replace this with the actual URL)
     model_url = "https://github.com/kahst/BirdNET-Analyzer/raw/main/model/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite"
     model_path = "model/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite"
     
@@ -29,4 +28,4 @@ def main():
     print("Download complete!")
 
 if __name__ == "__main__":
-    main() 
+    main()
