@@ -1,4 +1,5 @@
 import shutil
+import os
 from pathlib import Path
 from typing import List
 
@@ -26,8 +27,8 @@ async def analyze_audio(audio: UploadFile = File(...)):
     try:
         # Create a temporary directory to store the uploaded file
         temp_dir.mkdir(exist_ok=True)
-        # Use a consistent filename as some libraries might have issues with special characters
-        temp_file_path = temp_dir / "recording.tmp"
+        # Use a consistent filename with proper extension
+        temp_file_path = temp_dir / "recording.wav"
         
         # Save the uploaded file
         with temp_file_path.open("wb") as buffer:
@@ -37,14 +38,16 @@ async def analyze_audio(audio: UploadFile = File(...)):
         print(f"Analyzing {temp_file_path}...")
         print(f"File exists: {temp_file_path.exists()}")
         print(f"File size: {temp_file_path.stat().st_size} bytes")
+        print(f"Absolute path: {temp_file_path.absolute()}")
         
         try:
-            # Use the correct BirdNET API - pass the file path as string
+            # Use the absolute path as a string
             file_path_str = str(temp_file_path.absolute())
             print(f"Using file path: {file_path_str}")
             
-            # Call the BirdNET function directly
+            # Call BirdNET with the file path
             predictions = predict_species_within_audio_file(file_path_str)
+            print(f"Raw predictions type: {type(predictions)}")
             print(f"Raw predictions: {predictions}")
             
             # Convert to SpeciesPredictions object
@@ -54,9 +57,18 @@ async def analyze_audio(audio: UploadFile = File(...)):
         except Exception as e:
             print(f"BirdNET analysis failed: {e}")
             print(f"Error type: {type(e)}")
-            import traceback
             traceback.print_exc()
-            raise e
+            
+            # Try alternative approach - check if file needs conversion
+            try:
+                print("Trying alternative approach...")
+                # Try with just the filename
+                predictions = predict_species_within_audio_file("recording.wav")
+                species_predictions = SpeciesPredictions(predictions)
+                print("Alternative approach succeeded")
+            except Exception as e2:
+                print(f"Alternative approach also failed: {e2}")
+                raise e
 
         # Format results to match the iOS app's expectation
         results = []
