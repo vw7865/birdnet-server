@@ -61,7 +61,7 @@ async def analyze_audio(audio: UploadFile = File(...)):
             # Always pass a Path object to BirdNET
             audio_file_path = str(temp_file_path.resolve())
             print(f"Using audio file path (string): {audio_file_path}")
-            
+    
             # Verify the file is accessible
             if not os.path.isfile(audio_file_path):
                 raise Exception(f"Audio file not found at path: {audio_file_path}")
@@ -69,21 +69,20 @@ async def analyze_audio(audio: UploadFile = File(...)):
             print(f"File verification passed. Proceeding with BirdNET analysis...")
             print(f"Using BirdNET method: {BIRDNET_METHOD}")
             
-            # Call BirdNET with Path object
+            # Call BirdNET with positional arguments
             predictions_generator = predict_species_within_audio_file(
-                audio_file=audio_file_path,
-                min_confidence=0.1,
-                silent=True
+                audio_file_path,
+                0.1,
+                True
             )
             print(f"BirdNET function call successful")
-            
+        
             # Process the generator results
             results = []
             try:
                 for (start_time, end_time), species_prediction in predictions_generator:
                     print(f"Processing time interval: {start_time}-{end_time}s")
                     print(f"Found {len(species_prediction)} species in this interval")
-                    
                     # Each species_prediction is an OrderedDict with species names as keys and confidence as values
                     for species, confidence in species_prediction.items():
                         result = {
@@ -94,14 +93,13 @@ async def analyze_audio(audio: UploadFile = File(...)):
                         }
                         results.append(result)
                         print(f"  - {species}: {confidence:.3f}")
+                print(f"Analysis complete. Found {len(results)} results.")
+                return results
             except Exception as generator_error:
                 print(f"Error processing generator results: {generator_error}")
                 traceback.print_exc()
                 # Return empty results instead of failing completely
-                results = []
-            
-            print(f"Analysis complete. Found {len(results)} results.")
-            return results
+                return []
 
         except Exception as e:
             print(f"BirdNET analysis failed: {e}")
