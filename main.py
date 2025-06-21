@@ -69,12 +69,8 @@ async def analyze_audio(audio: UploadFile = File(...)):
             print(f"File verification passed. Proceeding with BirdNET analysis...")
             print(f"Using BirdNET method: {BIRDNET_METHOD}")
             
-            # Call BirdNET with positional arguments
-            predictions_generator = predict_species_within_audio_file(
-                audio_file_path,
-                0.1,
-                True
-            )
+            # Call BirdNET with only the audio file path
+            predictions_generator = predict_species_within_audio_file(audio_file_path)
             print(f"BirdNET function call successful")
         
             # Process the generator results
