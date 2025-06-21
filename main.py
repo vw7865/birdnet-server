@@ -58,19 +58,19 @@ async def analyze_audio(audio: UploadFile = File(...)):
         try:
             print(f"Starting BirdNET analysis...")
             
-            # Always pass a Path object to BirdNET
-            audio_file_path = str(temp_file_path.resolve())
-            print(f"Using audio file path (string): {audio_file_path}")
+            # Use Path object directly, don't convert to string
+            audio_file_path = temp_file_path.resolve()
+            print(f"Using audio file path (Path object): {audio_file_path}")
     
-            # Verify the file is accessible
-            if not os.path.isfile(audio_file_path):
+            # Verify the file is accessible using Path object
+            if not audio_file_path.is_file():
                 raise Exception(f"Audio file not found at path: {audio_file_path}")
             
             print(f"File verification passed. Proceeding with BirdNET analysis...")
             print(f"Using BirdNET method: {BIRDNET_METHOD}")
             
-            # Call BirdNET with only the audio file path
-            predictions_generator = predict_species_within_audio_file(audio_file_path)
+            # Call BirdNET with the Path object converted to string only for the function call
+            predictions_generator = predict_species_within_audio_file(str(audio_file_path))
             print(f"BirdNET function call successful")
         
             # Process the generator results
