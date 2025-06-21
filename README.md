@@ -1,135 +1,49 @@
-# BirdNET-Analyzer Server
+# Deploying the BirdNET Server
 
-This is a FastAPI-based server that provides an API endpoint for bird sound analysis using BirdNET.
+This guide provides instructions on how to deploy the Python-based BirdNET server to a cloud platform called [Render](https://render.com/), so it can be accessed publicly by your iOS app. Render has a free tier that is suitable for this project.
 
-## Setup
+## Step 1: Push to GitHub
 
-1. Create a Python virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+1.  **Create a GitHub Account:** If you don't have one, sign up at [github.com](https://github.com).
+2.  **Create a New Repository:** Create a new public repository on GitHub. Let's call it `birdnet-server`.
+3.  **Upload Files:** Upload the contents of your local `birdnet-server` directory (`main.py`, `requirements.txt`, and this `README.md`) to the new GitHub repository.
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+## Step 2: Deploy on Render
 
-3. Download the BirdNET model:
-```bash
-python download_model.py
-```
+1.  **Create a Render Account:** If you don't have one, sign up at [render.com](https://render.com) using your GitHub account.
 
-## Running the Server
+2.  **Create a New Web Service:**
+    *   On your Render dashboard, click **"New +"** and select **"Web Service"**.
+    *   Connect your GitHub account and select your `birdnet-server` repository.
 
-Start the server with:
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
+3.  **Configure the Service:**
+    *   **Name:** Give your service a name (e.g., `birdnet-server`). This will be part of its public URL.
+    *   **Region:** Choose a region close to you.
+    *   **Branch:** Select `main` (or `master`).
+    *   **Root Directory:** Leave this blank.
+    *   **Runtime:** `Python 3`
+    *   **Build Command:** `pip install -r requirements.txt` (this should be the default).
+    *   **Start Command:** `uvicorn main:app --host 0.0.0.0 --port 10000`
+    *   **Instance Type:** Select the `Free` plan.
 
-The server will be available at `http://localhost:8000`
+4.  **Deploy:** Click **"Create Web Service"**. Render will automatically pull your code from GitHub, build it, and deploy it. The first build might take a few minutes.
 
-## API Endpoints
+## Step 3: Update the iOS App
 
-### POST /analyze
-Upload an audio file for bird sound analysis.
+1.  **Get Your Public URL:** After a successful deployment, Render will provide you with a public URL for your service (e.g., `https://birdnet-server.onrender.com`).
 
-**Request:**
-- Content-Type: multipart/form-data
-- Body: audio file (m4a format)
+2.  **Update `BirdNetService.swift`:**
+    *   Open the `BirdSoundIdentifier` Xcode project.
+    *   Navigate to `BirdSoundIdentifier/Services/BirdNetService.swift`.
+    *   Replace the placeholder URL with your new public URL from Render.
 
-**Response:**
-```json
-[
-  {
-    "species": "string",
-    "confidence": 0.0,
-    "startTime": 0.0,
-    "endTime": 0.0
-  }
-]
-```
+    Your updated code should look like this:
+    ```swift
+    // Before
+    // private let birdnetServerURL = URL(string: "http://YOUR_LOCAL_IP:8000/analyze")!
 
-### GET /health
-Health check endpoint.
+    // After
+    private let birdnetServerURL = URL(string: "https://<your-service-name>.onrender.com/analyze")!
+    ```
 
-**Response:**
-```json
-{
-  "status": "healthy"
-}
-```
-
-## Development
-
-- The server uses FastAPI for the API framework
-- BirdNET model is loaded using TensorFlow Lite
-- Audio processing is done using librosa
-- CORS is enabled for development (should be restricted in production)
-
-## Production Deployment
-
-For production deployment:
-1. Update CORS settings in `main.py` to only allow your app's domain
-2. Use a proper WSGI server like Gunicorn
-3. Set up proper SSL/TLS
-4. Consider using a reverse proxy like Nginx
-5. Implement proper error handling and logging
-6. Add authentication if needed
-
-## Notes
-
-- The server requires about 1GB of RAM to run the model
-- Processing time depends on the length of the audio file
-- The model supports 6,000+ bird species
-- Audio files should be in m4a format 
-
-## Google Cloud Run Setup
-
-1. Install the Google Cloud SDK:
-```bash
-brew install --cask google-cloud-sdk
-```
-
-2. Authenticate:
-```bash
-gcloud init
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-gcloud services enable run.googleapis.com containerregistry.googleapis.com
-```
-
-3. Build and deploy the container:
-```bash
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/birdnet-server
-gcloud run deploy --image gcr.io/YOUR_PROJECT_ID/birdnet-server --platform managed
-```
-
-4. Set up a reverse proxy like Nginx to handle SSL/TLS and load balancing
-5. Implement proper error handling and logging
-6. Add authentication if needed 
-
-## AWS Elastic Beanstalk Setup
-
-1. Install the AWS CLI:
-```bash
-aws configure
-```
-
-2. Initialize Elastic Beanstalk:
-```bash
-rm -rf .elasticbeanstalk
-eb init -p docker birdnet-server
-eb create birdnet-env2 --single
-```
-
-3. Create an environment and deploy:
-```bash
-eb create birdnet-env --single
-```
-
-4. Monitor deployment
-5. Open your app
-6. Update your iOS app
-7. (Optional) Redeploy after changes
-8. (Optional) View logs 
+That's it! Your app will now be able to communicate with your live, public-facing server for bird sound analysis. 
