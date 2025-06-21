@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 # This is a workaround for a potential issue on some systems
 # with the underlying libraries used by BirdNET.
 import numpy
+import traceback
 
 from birdnet import SpeciesPredictions, predict_species_within_audio_file
 
@@ -38,23 +39,30 @@ async def analyze_audio(audio: UploadFile = File(...)):
         print(f"File size: {temp_file_path.stat().st_size} bytes")
         
         try:
-            # Try with Path object first
-            predictions = SpeciesPredictions(predict_species_within_audio_file(temp_file_path))
-        except Exception as birdnet_error:
-            print(f"BirdNET analysis error with Path: {birdnet_error}")
-            try:
-                # Try with string path
-                predictions = SpeciesPredictions(predict_species_within_audio_file(str(temp_file_path)))
-            except Exception as birdnet_error2:
-                print(f"BirdNET analysis error with string: {birdnet_error2}")
-                # Try with absolute path
-                predictions = SpeciesPredictions(predict_species_within_audio_file(str(temp_file_path.absolute())))
+            # Use the correct BirdNET API - pass the file path as string
+            file_path_str = str(temp_file_path.absolute())
+            print(f"Using file path: {file_path_str}")
+            
+            # Call the BirdNET function directly
+            predictions = predict_species_within_audio_file(file_path_str)
+            print(f"Raw predictions: {predictions}")
+            
+            # Convert to SpeciesPredictions object
+            species_predictions = SpeciesPredictions(predictions)
+            print(f"Species predictions created successfully")
+            
+        except Exception as e:
+            print(f"BirdNET analysis failed: {e}")
+            print(f"Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            raise e
 
         # Format results to match the iOS app's expectation
         results = []
         # The 'predictions' object contains items where the key is a time tuple (start, end)
         # and the value is another object containing species predictions for that time slice.
-        for (start_time, end_time), species_prediction in predictions.items():
+        for (start_time, end_time), species_prediction in species_predictions.items():
             # A time slice might have multiple species predictions.
             for species, confidence in species_prediction.items():
                 result = {
