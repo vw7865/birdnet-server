@@ -12,7 +12,22 @@ from fastapi.responses import JSONResponse
 import numpy
 import traceback
 
-from birdnet.audio_based_prediction import predict_species_within_audio_file
+# Try importing BirdNET differently
+try:
+    # Try the newer import first
+    from birdnet.audio_based_prediction import predict_species_within_audio_file
+    BIRDNET_AVAILABLE = True
+    BIRDNET_METHOD = "new"
+except ImportError as e1:
+    print(f"New BirdNET import failed: {e1}")
+    try:
+        # Try the older import
+        from birdnet import predict_species_within_audio_file
+        BIRDNET_AVAILABLE = True
+        BIRDNET_METHOD = "old"
+    except ImportError as e2:
+        print(f"Old BirdNET import failed: {e2}")
+        BIRDNET_AVAILABLE = False
 
 # Initialize FastAPI app
 app = FastAPI(title="BirdNET-Lite Server")
@@ -23,6 +38,10 @@ async def analyze_audio(audio: UploadFile = File(...)):
     Analyzes an audio file to identify bird species using BirdNET.
     """
     print(f"Received audio file: {audio.filename}, size: {audio.size} bytes")
+    
+    if not BIRDNET_AVAILABLE:
+        return JSONResponse(status_code=500, content={"error": "BirdNET library not available"})
+    
     temp_dir = Path("temp_audio")
     try:
         # Create a temporary directory to store the uploaded file
@@ -38,13 +57,11 @@ async def analyze_audio(audio: UploadFile = File(...)):
         print(f"Analyzing {temp_file_path}...")
         print(f"File exists: {temp_file_path.exists()}")
         print(f"File size: {temp_file_path.stat().st_size} bytes")
-        print(f"Absolute path: {temp_file_path.absolute()}")
         
         try:
-            # Use the correct BirdNET API
             print(f"Starting BirdNET analysis...")
             
-            # Convert Path to string for BirdNET compatibility
+            # Use absolute path as string
             audio_file_path = str(temp_file_path.absolute())
             print(f"Using audio file path: {audio_file_path}")
             
@@ -52,18 +69,30 @@ async def analyze_audio(audio: UploadFile = File(...)):
             if not os.path.exists(audio_file_path):
                 raise Exception(f"Audio file not found at path: {audio_file_path}")
             
-            # Check file permissions
-            if not os.access(audio_file_path, os.R_OK):
-                raise Exception(f"Cannot read audio file at path: {audio_file_path}")
-            
             print(f"File verification passed. Proceeding with BirdNET analysis...")
+            print(f"Using BirdNET method: {BIRDNET_METHOD}")
             
-            # Call BirdNET with the string file path - this returns a generator
-            predictions_generator = predict_species_within_audio_file(
-                audio_file=audio_file_path,
-                min_confidence=0.1,
-                silent=True  # Disable progress bar for server use
-            )
+            # Call BirdNET with explicit parameters
+            try:
+                predictions_generator = predict_species_within_audio_file(
+                    audio_file=audio_file_path,
+                    min_confidence=0.1,
+                    silent=True
+                )
+                print(f"BirdNET function call successful")
+            except Exception as birdnet_error:
+                print(f"BirdNET function call failed: {birdnet_error}")
+                print(f"Error type: {type(birdnet_error)}")
+                traceback.print_exc()
+                
+                # Try with different parameters
+                try:
+                    print("Trying BirdNET with minimal parameters...")
+                    predictions_generator = predict_species_within_audio_file(audio_file_path)
+                    print(f"BirdNET minimal call successful")
+                except Exception as minimal_error:
+                    print(f"BirdNET minimal call also failed: {minimal_error}")
+                    raise minimal_error
             
             print(f"BirdNET analysis started successfully")
             
