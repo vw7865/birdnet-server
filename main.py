@@ -140,5 +140,25 @@ async def analyze_audio(audio: UploadFile = File(...)):
 def read_root():
     return {"message": "BirdNET-Lite server is running."}
 
+@app.get("/test")
+def test_birdnet():
+    """
+    Test endpoint to verify BirdNET library functionality
+    """
+    try:
+        if not BIRDNET_AVAILABLE:
+            return {"status": "error", "message": "BirdNET library not available"}
+        
+        # Test if we can import and access BirdNET functions
+        import birdnet
+        return {
+            "status": "success", 
+            "message": "BirdNET library is available",
+            "method": BIRDNET_METHOD,
+            "birdnet_version": getattr(birdnet, '__version__', 'unknown')
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"BirdNET test failed: {str(e)}"}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 
