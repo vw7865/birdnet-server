@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 import numpy
 import traceback
 
-from birdnet import SpeciesPredictions, predict_species_within_audio_file
+from birdnet.audio_based_prediction import predict_species_within_audio_file
 
 # Initialize FastAPI app
 app = FastAPI(title="BirdNET-Lite Server")
@@ -41,52 +41,63 @@ async def analyze_audio(audio: UploadFile = File(...)):
         print(f"Absolute path: {temp_file_path.absolute()}")
         
         try:
-            # Use the absolute path as a string
-            file_path_str = str(temp_file_path.absolute())
-            print(f"Using file path: {file_path_str}")
+            # Use the correct BirdNET API
+            print(f"Starting BirdNET analysis...")
             
-            # Call BirdNET with the file path
-            predictions = predict_species_within_audio_file(file_path_str)
-            print(f"Raw predictions type: {type(predictions)}")
-            print(f"Raw predictions: {predictions}")
+            # Convert Path to string for BirdNET compatibility
+            audio_file_path = str(temp_file_path.absolute())
+            print(f"Using audio file path: {audio_file_path}")
             
-            # Convert to SpeciesPredictions object
-            species_predictions = SpeciesPredictions(predictions)
-            print(f"Species predictions created successfully")
+            # Verify the file is accessible
+            if not os.path.exists(audio_file_path):
+                raise Exception(f"Audio file not found at path: {audio_file_path}")
             
+            # Check file permissions
+            if not os.access(audio_file_path, os.R_OK):
+                raise Exception(f"Cannot read audio file at path: {audio_file_path}")
+            
+            print(f"File verification passed. Proceeding with BirdNET analysis...")
+            
+            # Call BirdNET with the string file path - this returns a generator
+            predictions_generator = predict_species_within_audio_file(
+                audio_file=audio_file_path,
+                min_confidence=0.1,
+                silent=True  # Disable progress bar for server use
+            )
+            
+            print(f"BirdNET analysis started successfully")
+            
+            # Process the generator results
+            results = []
+            try:
+                for (start_time, end_time), species_prediction in predictions_generator:
+                    print(f"Processing time interval: {start_time}-{end_time}s")
+                    print(f"Found {len(species_prediction)} species in this interval")
+                    
+                    # Each species_prediction is an OrderedDict with species names as keys and confidence as values
+                    for species, confidence in species_prediction.items():
+                        result = {
+                            "common_name": species,  # e.g., "Poecile atricapillus_Black-capped Chickadee"
+                            "confidence": float(confidence),
+                            "start_time": float(start_time),
+                            "end_time": float(end_time)
+                        }
+                        results.append(result)
+                        print(f"  - {species}: {confidence:.3f}")
+            except Exception as generator_error:
+                print(f"Error processing generator results: {generator_error}")
+                traceback.print_exc()
+                # Return empty results instead of failing completely
+                results = []
+            
+            print(f"Analysis complete. Found {len(results)} results.")
+            return results
+
         except Exception as e:
             print(f"BirdNET analysis failed: {e}")
             print(f"Error type: {type(e)}")
             traceback.print_exc()
-            
-            # Try alternative approach - check if file needs conversion
-            try:
-                print("Trying alternative approach...")
-                # Try with just the filename
-                predictions = predict_species_within_audio_file("recording.wav")
-                species_predictions = SpeciesPredictions(predictions)
-                print("Alternative approach succeeded")
-            except Exception as e2:
-                print(f"Alternative approach also failed: {e2}")
-                raise e
-
-        # Format results to match the iOS app's expectation
-        results = []
-        # The 'predictions' object contains items where the key is a time tuple (start, end)
-        # and the value is another object containing species predictions for that time slice.
-        for (start_time, end_time), species_prediction in species_predictions.items():
-            # A time slice might have multiple species predictions.
-            for species, confidence in species_prediction.items():
-                result = {
-                    "common_name": species, # e.g., "Poecile atricapillus_Black-capped Chickadee"
-                    "confidence": confidence,
-                    "start_time": start_time,
-                    "end_time": end_time
-                }
-                results.append(result)
-        
-        print(f"Analysis complete. Found {len(results)} results.")
-        return results
+            raise e
 
     except Exception as e:
         print(f"An error occurred: {e}")
