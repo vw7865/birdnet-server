@@ -1,4 +1,5 @@
 fastapi
 uvicorn
 birdnet
-numpy 
+numpy
+python-multipart 
