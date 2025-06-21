@@ -34,7 +34,21 @@ async def analyze_audio(audio: UploadFile = File(...)):
 
         # Run BirdNET analysis
         print(f"Analyzing {temp_file_path}...")
-        predictions = SpeciesPredictions(predict_species_within_audio_file(str(temp_file_path)))
+        print(f"File exists: {temp_file_path.exists()}")
+        print(f"File size: {temp_file_path.stat().st_size} bytes")
+        
+        try:
+            # Try with Path object first
+            predictions = SpeciesPredictions(predict_species_within_audio_file(temp_file_path))
+        except Exception as birdnet_error:
+            print(f"BirdNET analysis error with Path: {birdnet_error}")
+            try:
+                # Try with string path
+                predictions = SpeciesPredictions(predict_species_within_audio_file(str(temp_file_path)))
+            except Exception as birdnet_error2:
+                print(f"BirdNET analysis error with string: {birdnet_error2}")
+                # Try with absolute path
+                predictions = SpeciesPredictions(predict_species_within_audio_file(str(temp_file_path.absolute())))
 
         # Format results to match the iOS app's expectation
         results = []
